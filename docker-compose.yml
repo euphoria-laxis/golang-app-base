@@ -1,0 +1,39 @@
+version: '3.8'
+services:
+    cache:
+        image: redis:6.2-bullseye
+        restart: "on-failure"
+        env_file:
+            - .env
+        ports:
+            - '6379:6379'
+        command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD:?err}
+        volumes:
+            - cache:/data
+        stdin_open: true
+        tty: true
+        hostname: redis
+        networks:
+            bridge:
+    dev:
+        restart: "no"
+        build:
+            dockerfile: docker/Dockerfile.dev
+            context: .
+        volumes:
+            - ./:/app
+        networks:
+            bridge:
+        env_file:
+            - config/.env.dev
+            - .env
+        ports:
+            - "3000:3000"
+networks:
+    bridge:
+        driver: bridge
+volumes:
+    cache:
+        driver: local
+    dev:
+        driver: local

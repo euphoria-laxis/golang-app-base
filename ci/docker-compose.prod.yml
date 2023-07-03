@@ -1,0 +1,59 @@
+version: '3.8'
+services:
+    # Database for production and test environments
+    db:
+        image: postgres:14.7-bullseye
+        restart: "on-failure"
+        env_file:
+            - .env
+        ports:
+            - '5432:5432'
+        volumes:
+            - ../postgres-data:/var/lib/postgresql/data
+            # init database and tables using sql exports
+            - ../db/database.sql:/docker-entrypoint-initdb.d/database.sql
+        stdin_open: true
+        tty: true
+        hostname: postgres
+        networks:
+            bridge:
+    cache:
+        image: redis:6.2-bullseye
+        restart: "on-failure"
+        env_file:
+            - .env
+        ports:
+            - '6379:6379'
+        command: redis-server --save 20 1 --loglevel warning --requirepass ${REDIS_PASSWORD:?err}
+        volumes:
+            - cache:/data
+        stdin_open: true
+        tty: true
+        hostname: redis
+        networks:
+            bridge:
+    # container 'prod' is pushed to registry for deployment
+    prod:
+        restart: "always"
+        build:
+            dockerfile: ../docker/Dockerfile.prod
+            context: ..
+        volumes:
+            - ./:/app
+        networks:
+            bridge:
+        env_file:
+            - config/.env.prod
+            - .env
+        ports:
+            - "3000:3000"
+networks:
+    bridge:
+        driver: bridge
+volumes:
+    db:
+        driver: local
+    cache:
+        driver: local
+    prod:
+        driver: local
